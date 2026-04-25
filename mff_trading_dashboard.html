@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sefiyeff Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  /* Temel Font ve Arka Plan */
+  body { 
+    background: #07080f; 
+    font-family: 'Questrial', sans-serif; 
+    color: #ffffff; 
+    padding: 20px; 
+    min-height: 100vh; 
+    letter-spacing: 0.2px;
+  }
+  
+  .dash { max-width: 1400px; margin: 0 auto; }
+
+  /* Header ve Logo */
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #1e2235; padding-bottom: 14px; }
+  .logo { font-size: 18px; font-weight: 700; color: #6295f9; letter-spacing: 2px; }
+  .subtitle { font-size: 12px; color: #ffffff; margin-top: 3px; opacity: 0.8; }
+
+  /* Dosya Yükleme Alanı */
+  .loader-bar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: #121520; border: 1px solid #1e2235; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 16px;
+  }
+  .loader-bar > span { font-size: 12px; color: #ffffff; letter-spacing: 1px; white-space: nowrap; }
+  .csv-btn {
+    background: #1a2550; border: 1px solid #6295f9; border-radius: 6px;
+    color: #6295f9; font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    padding: 8px 18px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .csv-btn:hover { background: #6295f9; color: #fff; }
+  .file-tags { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+  .file-tag { background: #0f1a30; border: 1px solid #2a3a60; border-radius: 4px; color: #6295f9; font-size: 11px; padding: 4px 10px; }
+  .file-hint { font-size: 12px; color: #ffffff; opacity: 0.6; }
+  #fileInput { display: none; }
+  .clear-btn {
+    background: #1a0a0a; border: 1px solid #ff5252; border-radius: 6px;
+    color: #ff5252; font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    padding: 8px 14px; cursor: pointer;
+  }
+
+  /* Ayarlar Çubuğu */
+  .settings-bar {
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    background: #121520; border: 1px solid #1e2235; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  .settings-bar label { font-size: 12px; color: #ffffff; letter-spacing: 0.5px; }
+  .settings-bar input {
+    background: #0b0d14; border: 1px solid #2a2f45; border-radius: 6px;
+    color: #ffffff; font-family: inherit; font-size: 14px;
+    padding: 6px 10px; width: 90px; margin-left: 8px; outline: none;
+  }
+  .settings-bar input:focus { border-color: #6295f9; }
+  .settings-bar button {
+    background: #1a2550; border: 1px solid #6295f9; border-radius: 6px;
+    color: #6295f9; font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    padding: 8px 16px; cursor: pointer; transition: 0.2s;
+  }
+
+  /* Özet Metrikler */
+  .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+  .metric { background: #121520; border: 1px solid #1e2235; border-radius: 10px; padding: 14px 12px; }
+  .metric-label { font-size: 11px; color: #ffffff; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7; }
+  .metric-val { font-size: 24px; font-weight: 500; }
+  .green  { color: #00d4a0; }
+  .red    { color: #ff5252; }
+  .blue   { color: #6295f9; }
+  .neutral{ color: #ffffff; }
+
+  /* Ana Paneller */
+  .mid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .panel { background: #121520; border: 1px solid #1e2235; border-radius: 10px; padding: 16px; }
+  .panel-title { font-size: 11px; color: #ffffff; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; opacity: 0.7; }
+
+  .progress-bar-bg  { background: #1e2235; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
+  .progress-bar-fill{ height: 100%; border-radius: 10px; background: linear-gradient(90deg,#6295f9,#00d4a0); transition: width 0.6s ease; }
+
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .mini-card { background: #0f1219; border: 1px solid #1a1e2c; border-radius: 8px; padding: 12px; }
+  .mini-label{ font-size: 11px; color: #ffffff; letter-spacing: 1px; margin-bottom: 6px; opacity: 0.6; }
+  .mini-val  { font-size: 18px; font-weight: 500; }
+
+  .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1e2c; font-size: 14px; }
+  .stat-row:last-child { border-bottom: none; }
+
+  /* TAKVİM DÜZENLEMELERİ (GÜNCELLENDİ) */
+  .cal-container { display: flex; flex-direction: column; }
+  
+  .cal-header-row { 
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    gap: 5px; 
+    margin-bottom: 10px;
+  }
+  
+  .cal-day-label { 
+    font-size: 11px; 
+    color: #6295f9; 
+    text-align: center; 
+    letter-spacing: 1px; 
+    padding: 10px 0; 
+    opacity: 0.8;
+    background: #0b0d14;
+    border-radius: 6px;
+    font-weight: bold;
+  }
+
+  .month-nav { display: flex; align-items: center; gap: 10px; }
+  .month-label { font-size: 15px; color: #ffffff; min-width: 140px; text-align: center; font-weight: 500; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-cell { 
+    background: #0f1219; 
+    border: 1px solid #1e2235; 
+    border-radius: 8px; 
+    padding: 10px 8px; 
+    min-height: 85px; 
+    transition: 0.2s;
+    cursor: pointer;
+  }
+  .cal-cell:hover { border-color: #6295f9; background: #131722; }
+  .cal-cell.green-cell { background: #071a13; border-color: #00d4a0; }
+  .cal-cell.red-cell   { background: #190909; border-color: #ff5252; }
+  .cal-cell.empty { background: transparent; border: none; cursor: default; }
+
+  .cal-num { font-size: 12px; color: #ffffff; opacity: 0.5; }
+  .cal-pnl { font-size: 14px; font-weight: 700; margin-top: 6px; }
+  .cal-wr  { font-size: 11px; margin-top: 2px; font-weight: 500; }
+  .cal-trades { font-size: 10px; opacity: 0.6; margin-top: 4px; }
+
+  /* Alt Kısım ve Trade Log */
+  .bottom-row { display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 12px; margin-top: 16px; }
+  
+  .trade-header-row {
+    display: grid; grid-template-columns: 130px 80px 50px 90px 60px 80px;
+    gap: 8px; padding: 10px 5px; border-bottom: 1px solid #1e2235;
+    font-size: 11px; color: #ffffff; opacity: 0.6;
+  }
+  
+  .trade-row {
+    display: grid; grid-template-columns: 130px 80px 50px 90px 60px 80px;
+    gap: 8px; padding: 12px 5px; border-bottom: 1px solid #1a1e2c;
+    align-items: center; font-size: 13px;
+  }
+  
+  .badge { background: #1a2040; color: #6295f9; font-size: 11px; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+  .trade-log-scroll { max-height: 400px; overflow-y: auto; }
+
+  /* Grafik */
+  .chart-wrapper { height: 300px; position: relative; }
+
+  /* Boş Durum */
+  .empty-state { text-align: center; padding: 100px 0; color: #ffffff; opacity: 0.5; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 20px; }
+  
+  /* Scrollbar Stili */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #07080f; }
+  ::-webkit-scrollbar-thumb { background: #1e2235; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #6295f9; }
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <div class="header">
+    <div>
+      <div class="logo">MFF TRADING JOURNAL</div>
+      <div class="subtitle" id="header-subtitle">Veri bekleniyor...</div>
+    </div>
+    <div style="font-size:11px;color:#ffffff;" id="last-updated"></div>
+  </div>
+
+  <div class="loader-bar">
+    <span>CSV DOSYALARI</span>
+    <button class="csv-btn" onclick="document.getElementById('fileInput').click()">+ DOSYA SEC</button>
+    <input type="file" id="fileInput" accept=".csv" multiple>
+    <div class="file-tags" id="file-tags">
+      <span class="file-hint">Klasörünü ac &rarr; hepsini sec (Ctrl+A) &rarr; Ac</span>
+    </div>
+    <button class="clear-btn" id="clear-btn" onclick="clearFiles()" style="display:none;">TEMIZLE</button>
+  </div>
+
+  <div class="settings-bar">
+    <span style="font-size:11px;color:#6295f9;letter-spacing:1px;">AYARLAR</span>
+    <label>Lot Fee ($)<input type="number" id="commInput" value="4" step="0.5"></label>
+    <label>1R Risk ($)<input type="number" id="riskInput" value="200" step="10"></label>
+    <button onclick="recalculate()">UYGULA</button>
+    <span id="calc-status"></span>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <div class="mid-row">
+      <div class="panel">
+        <div class="panel-title">Path to Live — Winning Days</div>
+        <div id="path-live"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Advanced Stats</div>
+        <div id="extra-stats"></div>
+      </div>
+    </div>
+
+	<div class="panel" style="margin-bottom:16px;">
+	  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+		<div class="panel-title" style="margin:0;">Trading Calendar</div>
+		<div class="month-nav">
+		  <button id="prevMonth" onclick="changeMonth(-1)" class="csv-btn" style="padding: 5px 10px;">&larr;</button>
+		  <div class="month-label" id="month-label">Nisan 2026</div>
+		  <button id="nextMonth" onclick="changeMonth(1)" class="csv-btn" style="padding: 5px 10px;">&rarr;</button>
+		</div>
+	  </div>
+
+	  <div class="cal-container">
+		<div class="cal-header-row">
+		  <div class="cal-day-label">PAZ</div>
+		  <div class="cal-day-label">PZT</div>
+		  <div class="cal-day-label">SAL</div>
+		  <div class="cal-day-label">ÇAR</div>
+		  <div class="cal-day-label">PER</div>
+		  <div class="cal-day-label">CUM</div>
+		  <div class="cal-day-label">CMT</div>
+		</div>
+		<div class="cal-grid" id="cal-grid"></div>
+	  </div>
+	</div>
+
+    <div class="bottom-row">
+      <div class="panel">
+        <div class="panel-title">Trade Log</div>
+        <div class="trade-header-row">
+          <span>TARIH &amp; SAAT</span><span>SEMBOL</span><span>QTY</span>
+          <span>NET PNL</span><span>R</span><span>SURE</span>
+        </div>
+        <div class="trade-log-scroll" id="trade-log"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Cumulative P&amp;L</div>
+        <div class="chart-wrapper">
+          <canvas id="pnlChart" role="img" aria-label="Kumulatif PnL grafigi"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div class="icon">📂</div>
+    <p>
+      Yukarıdaki <strong style="color:#6295f9;">+ DOSYA SEC</strong> butonuna tikla<br>
+      Klasörünü ac &rarr; tüm CSV'leri sec <kbd>Ctrl+A</kbd> &rarr; <kbd>Ac</kbd><br>
+      Birden fazla CSV otomatik birlestir, duplicate islemler temizlenir.
+    </p>
+  </div>
+
+</div>
+
+<script>
+const MONTHS = ['Ocak','Subat','Mart','Nisan','Mayis','Haziran',
+                'Temmuz','Agustos','Eylul','Ekim','Kasim','Aralik'];
+
+let allTrades    = [];
+let chartInstance= null;
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let loadedFiles  = {};
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const cols=[]; let cur='', inQ=false;
+    for (const c of line) {
+      if (c==='"') { inQ=!inQ; }
+      else if (c===',' && !inQ) { cols.push(cur.trim()); cur=''; }
+      else { cur+=c; }
+    }
+    cols.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i) => obj[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r => r.symbol||r.sym);
+}
+
+function cleanPnl(v) {
+  if (!v) return 0;
+  v=String(v).replace('$','').replace(/,/g,'').trim();
+  if (v.includes('(')) v='-'+v.replace(/[()]/g,'');
+  return parseFloat(v)||0;
+}
+
+function parseDurSec(d) {
+  if (!d) return 0;
+  const m=d.match(/(\d+)\s*min/), s=d.match(/(\d+)\s*sec/);
+  return (m?parseInt(m[1])*60:0)+(s?parseInt(s[1]):0);
+}
+
+function rowToTrade(r) {
+  const sym  = r.symbol||r.sym||'?';
+  const qty  = parseFloat(r.qty)||1;
+  const pnl  = cleanPnl(r.pnl);
+  const ts   = r.boughtTimestamp||r.ts||'';
+  const dur  = r.duration||r.dur||'';
+  const bfid = r.buyFillId||'';
+  const sfid = r.sellFillId||'';
+  let dt=null, date='';
+  if (ts) {
+    const fixed=ts.replace(/(\d{2})\/(\d{2})\/(\d{4})/,'$3-$1-$2');
+    dt=new Date(fixed);
+    if (!isNaN(dt)) date=dt.toISOString().slice(0,10);
+  }
+  return {sym,qty,pnl,ts,dur,bfid,sfid,dt,date,durSec:parseDurSec(dur)};
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const files=Array.from(e.target.files);
+  if (!files.length) return;
+  let pending=files.length;
+  files.forEach(file => {
+    const reader=new FileReader();
+    reader.onload=ev => {
+      loadedFiles[file.name]=parseCSV(ev.target.result).map(rowToTrade);
+      pending--;
+      if (pending===0) finalize();
+    };
+    reader.readAsText(file,'UTF-8');
+  });
+  this.value='';
+});
+
+function finalize() {
+  let merged=Object.values(loadedFiles).flat();
+  const seen=new Set();
+  merged=merged.filter(t => {
+    if (!t.bfid||!t.sfid) return true;
+    const key=t.bfid+'|'+t.sfid;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  merged.sort((a,b)=>(a.dt||0)-(b.dt||0));
+  allTrades=merged;
+
+  document.getElementById('file-tags').innerHTML=
+    Object.keys(loadedFiles).map(n=>
+      `<span class="file-tag">${n} &mdash; ${loadedFiles[n].length} satir</span>`
+    ).join('');
+  document.getElementById('clear-btn').style.display='block';
+
+  if (merged.length && merged[0].dt) {
+    currentYear=merged[0].dt.getFullYear();
+    currentMonth=merged[0].dt.getMonth();
+  }
+
+  const syms=[...new Set(merged.map(t=>t.sym))].join(', ');
+  document.getElementById('header-subtitle').textContent=`${merged.length} islem · ${syms}`;
+  document.getElementById('last-updated').textContent='Yuklendi: '+new Date().toLocaleString('tr-TR');
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('empty-state').style.display='none';
+  recalculate();
+}
+
+function clearFiles() {
+  loadedFiles={}; allTrades=[];
+  document.getElementById('file-tags').innerHTML=
+    '<span class="file-hint">Klasörünü ac &rarr; hepsini sec (Ctrl+A) &rarr; Ac</span>';
+  document.getElementById('clear-btn').style.display='none';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('empty-state').style.display='block';
+  document.getElementById('header-subtitle').textContent='Veri bekleniyor...';
+  document.getElementById('last-updated').textContent='';
+  if (chartInstance) { chartInstance.destroy(); chartInstance=null; }
+}
+
+function availableMonths() {
+  const s=new Set(allTrades.filter(t=>t.date).map(t=>t.date.slice(0,7)));
+  return [...s].sort();
+}
+
+function changeMonth(dir) {
+    currentMonth += dir;
+    
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+
+    recalculate(); // Verileri ve takvimi tazele
+}
+
+function recalculate() {
+  if (!allTrades.length) return;
+  const comm=parseFloat(document.getElementById('commInput').value)||4;
+  const risk=parseFloat(document.getElementById('riskInput').value)||100;
+  const st=document.getElementById('calc-status');
+  st.textContent='Hesaplaniyor...';
+  setTimeout(()=>{
+    renderAll(comm,risk);
+    st.textContent='Guncellendi ✓';
+    setTimeout(()=>st.textContent='',2000);
+  },40);
+}
+
+function durStr(sec) {
+  if (!sec) return '-';
+  if (sec<60) return sec+'s';
+  const m=Math.floor(sec/60), s=sec%60;
+  return s>0?`${m}m ${s}s`:`${m}m`;
+}
+
+function fmt(v) {
+  return (v>=0?'+':'')+`$${Math.abs(v).toFixed(2)}`;
+}
+
+function renderAll(comm, risk) {
+  const trades=allTrades.map(t=>({...t,net:t.pnl-(t.qty*comm)}));
+  const netTotal=trades.reduce((a,t)=>a+t.net,0);
+  const winners=trades.filter(t=>t.net>0);
+  const losers =trades.filter(t=>t.net<0);
+  const wr=trades.length?winners.length/trades.length*100:0;
+  const avgWin =winners.length?winners.reduce((a,t)=>a+t.net,0)/winners.length:0;
+  const avgLoss=losers.length ?losers.reduce((a,t)=>a+t.net,0)/losers.length:0;
+  const rr=avgLoss?Math.abs(avgWin/avgLoss):0;
+  const bigWin =winners.length?Math.max(...winners.map(t=>t.net)):0;
+  const bigLoss=losers.length ?Math.min(...losers.map(t=>t.net)):0;
+  const grossW=winners.reduce((a,t)=>a+t.net,0);
+  const grossL=Math.abs(losers.reduce((a,t)=>a+t.net,0));
+  const pf=grossL?grossW/grossL:0;
+
+  const byDate={};
+  trades.forEach(t=>{if(t.date){byDate[t.date]=byDate[t.date]||[];byDate[t.date].push(t);}});
+  const dates=Object.keys(byDate).sort();
+  const winDays=dates.filter(d=>byDate[d].reduce((a,t)=>a+t.net,0)>0).length;
+  const totalDays=dates.length;
+
+  // METRICS
+  const mg=document.getElementById('metrics-grid');
+  mg.innerHTML='';
+  [
+    {label:'NET P&L',  val:`$${netTotal.toFixed(2)}`,                      cls:netTotal>=0?'green':'red'},
+    {label:'TOTAL R',  val:`${(netTotal/risk).toFixed(2)}R`,               cls:netTotal>=0?'blue':'red'},
+    {label:'WIN RATE', val:`${wr.toFixed(1)}%`,                            cls:wr>=50?'green':'red'},
+    {label:'TRADES',   val:trades.length,                                  cls:'neutral'},
+    {label:'WIN DAYS', val:`${winDays} / ${totalDays}`,                    cls:'green'},
+    {label:'AVG TRADE',val:`$${(trades.length?netTotal/trades.length:0).toFixed(2)}`,cls:(netTotal/(trades.length||1))>=0?'green':'red'},
+  ].forEach(m=>{
+    mg.innerHTML+=`<div class="metric"><div class="metric-label">${m.label}</div><div class="metric-val ${m.cls}">${m.val}</div></div>`;
+  });
+
+  // PATH TO LIVE
+  const pct=Math.min(winDays/30,1);
+  document.getElementById('path-live').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#6295f9;margin-bottom:6px;">
+      <span>Kazanilan Gun</span><span>${winDays} / 30</span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${(pct*100).toFixed(1)}%"></div></div>
+    <div style="font-size:11px;color:#ffffff;margin-top:6px;">${(pct*100).toFixed(0)}% tamamlandi</div>
+    <div class="mini-grid">
+      <div class="mini-card"><div class="mini-label">EN BUYUK KAZ.</div><div class="mini-val green">$${bigWin.toFixed(0)}</div></div>
+      <div class="mini-card"><div class="mini-label">EN BUYUK KAY.</div><div class="mini-val red">$${bigLoss.toFixed(0)}</div></div>
+    </div>`;
+
+  // EXTRA STATS
+  document.getElementById('extra-stats').innerHTML=[
+    {k:'Avg Win',      v:`$${avgWin.toFixed(2)}`, c:'green'},
+    {k:'Avg Loss',     v:`$${avgLoss.toFixed(2)}`,c:'red'},
+    {k:'Risk:Reward',  v:`${rr.toFixed(2)}x`,     c:'blue'},
+    {k:'Profit Factor',v:`${pf.toFixed(2)}`,      c:'blue'},
+    {k:'Winners',      v:winners.length,           c:'green'},
+    {k:'Losers',       v:losers.length,            c:'red'},
+  ].map(s=>`<div class="stat-row"><span class="stat-key">${s.k}</span><span class="stat-val ${s.c}">${s.v}</span></div>`).join('');
+
+  renderCalendar(trades);
+
+  // TRADE LOG
+  const tlog=document.getElementById('trade-log');
+  tlog.innerHTML='';
+  [...trades].reverse().forEach(t=>{
+    const rVal=(t.net/risk).toFixed(2);
+    const rc=t.net>0?'#00d4a0':t.net<0?'#ff5252':'#ffffff';
+    const time=t.dt?t.dt.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+    tlog.innerHTML+=`<div class="trade-row">
+      <span style="color:#ffffff;font-size:11px;">${time}</span>
+      <span><span class="badge">${t.sym}</span></span>
+      <span style="color:#ffffff;">${t.qty}</span>
+      <span style="color:${rc};font-weight:700;">${fmt(t.net)}</span>
+      <span style="color:${rc};">${rVal}R</span>
+      <span style="color:#ffffff;">${durStr(t.durSec)}</span>
+    </div>`;
+  });
+
+  // CHART
+  let cum=0;
+  const cumData=trades.map(t=>{cum+=t.net;return parseFloat(cum.toFixed(2));});
+  const lc=netTotal>=0?'#00d4a0':'#ff5252';
+  const fc=netTotal>=0?'rgba(0,212,160,0.08)':'rgba(255,82,82,0.08)';
+  if (chartInstance) chartInstance.destroy();
+  chartInstance=new Chart(document.getElementById('pnlChart'),{
+    type:'line',
+    data:{
+      labels:trades.map((_,i)=>`T${i+1}`),
+      datasets:[{label:'Cumulative P&L',data:cumData,
+        borderColor:lc,backgroundColor:fc,borderWidth:2,
+        pointRadius:3,pointBackgroundColor:lc,
+        pointBorderColor:'#121520',pointBorderWidth:2,
+        fill:true,tension:0.35}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#ffffff',font:{size:10}},grid:{color:'#1a1e2c'}},
+        y:{ticks:{color:'#ffffff',font:{size:10},callback:v=>`$${v}`},grid:{color:'#1a1e2c'}}
+      }
+    }
+  });
+}
+
+function renderCalendar(trades) {
+  const byDate = {};
+  trades.forEach(t => { if (t.date) { byDate[t.date] = byDate[t.date] || []; byDate[t.date].push(t); } });
+
+  document.getElementById('month-label').textContent = `${MONTHS[currentMonth]} ${currentYear}`;
+
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay(); // 0=Pazar, 1=Pzt...
+  
+  const cg = document.getElementById('cal-grid');
+  cg.innerHTML = '';
+
+  // 1. Ayın ilk gününden önceki boşlukları ekle
+  for (let i = 0; i < firstDay; i++) {
+    cg.innerHTML += '<div class="cal-cell empty" style="border:none; background:transparent;"></div>';
+  }
+
+  // 2. Günleri ekle
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dt = byDate[key] || [];
+    const dpnl = dt.reduce((a, t) => a + t.net, 0);
+    const dwr = dt.length ? (dt.filter(t => t.net > 0).length / dt.length * 100).toFixed(0) : null;
+    
+    let cls = '';
+    if (dt.length) cls = dpnl >= 0 ? 'green-cell' : 'red-cell';
+    const pc = dpnl >= 0 ? '#00d4a0' : '#ff5252';
+    
+    cg.innerHTML += `
+      <div class="cal-cell ${cls}" onclick="showDayTrades('${key}')" style="cursor:pointer; position:relative;">
+        <div class="cal-num">${d}</div>
+        ${dt.length ? `
+          <div class="cal-pnl" style="color:${pc}; font-weight:bold;">${dpnl >= 0 ? '+' : ''}$${Math.abs(dpnl).toFixed(0)}</div>
+          <div class="cal-wr" style="font-size:10px; color:${pc}">${dwr}% WR</div>
+          <div style="font-size:9px; opacity:0.6; margin-top:2px;">${dt.length} İşlem</div>
+        ` : ''}
+      </div>`;
+  }
+}
+
+// Güne tıklandığında alttaki Trade Log'u filtreleyen fonksiyon
+function showDayTrades(dateKey) {
+  const comm = parseFloat(document.getElementById('commInput').value) || 4;
+  const risk = parseFloat(document.getElementById('riskInput').value) || 100;
+  
+  const filtered = allTrades
+    .map(t => ({ ...t, net: t.pnl - (t.qty * comm) }))
+    .filter(t => t.date === dateKey);
+
+  if (filtered.length === 0) return;
+
+  const tlog = document.getElementById('trade-log');
+  tlog.innerHTML = '';
+  
+  // Başlığı güncelle (Hangi günü izliyoruz?)
+  const logTitle = document.querySelector('.bottom-row .panel-title');
+  logTitle.innerHTML = `Trade Log — <span style="color:#6295f9">${dateKey}</span> 
+    <button onclick="recalculate()" style="background:none; border:none; color:#6295f9; cursor:pointer; font-size:10px; text-decoration:underline;">[Tümünü Göster]</button>`;
+
+  filtered.reverse().forEach(t => {
+    const rVal = (t.net / risk).toFixed(2);
+    const rc = t.net > 0 ? '#00d4a0' : t.net < 0 ? '#ff5252' : '#ffffff';
+    tlog.innerHTML += `
+      <div class="trade-row">
+        <span style="font-size:11px;">${t.ts.split(' ')[1] || ''}</span>
+        <span><span class="badge">${t.sym}</span></span>
+        <span>${t.qty}</span>
+        <span style="color:${rc}; font-weight:700;">${fmt(t.net)}</span>
+        <span style="color:${rc};">${rVal}R</span>
+        <span>${durStr(t.durSec)}</span>
+      </div>`;
+  });
+}
+window.onload = function() {
+    const savedData = localStorage.getItem('mff_trading_data');
+    if (savedData) {
+        allTrades = JSON.parse(savedData);
+        // Tarih objelerini (Date) string'den tekrar objeye çevir
+        allTrades.forEach(t => {
+            if(t.dt) t.dt = new Date(t.dt);
+        });
+        finalize(true); // true: Hafızadan yükleniyor demek
+    }
+};
+
+// finalize fonksiyonunu güncelle (Veriyi hafızaya kaydetmesi için)
+function finalize(fromStorage = false) {
+    let merged = [];
+    if (fromStorage) {
+        merged = allTrades;
+    } else {
+        merged = Object.values(loadedFiles).flat();
+        const seen = new Set();
+        merged = merged.filter(t => {
+            if (!t.bfid || !t.sfid) return true;
+            const key = t.bfid + '|' + t.sfid;
+            if (seen.has(key)) return false;
+            seen.add(key); return true;
+        });
+        merged.sort((a, b) => (a.dt || 0) - (b.dt || 0));
+        allTrades = merged;
+        // Tarayıcı hafızasına kaydet
+        localStorage.setItem('mff_trading_data', JSON.stringify(allTrades));
+    }
+
+    if (allTrades.length === 0) return;
+
+    // Dosya isimlerini/etiketlerini güncelle
+    if (!fromStorage) {
+        document.getElementById('file-tags').innerHTML =
+            Object.keys(loadedFiles).map(n =>
+                `<span class="file-tag">${n} &mdash; ${loadedFiles[n].length} satır</span>`
+            ).join('');
+    } else {
+        document.getElementById('file-tags').innerHTML = `<span class="file-tag" style="background:#00d4a0; color:#000;">Hafızadan Yüklendi (${allTrades.length} İşlem)</span>`;
+    }
+    
+    document.getElementById('clear-btn').style.display = 'block';
+
+    if (allTrades.length && allTrades[0].dt) {
+        currentYear = allTrades[allTrades.length - 1].dt.getFullYear();
+        currentMonth = allTrades[allTrades.length - 1].dt.getMonth();
+    }
+
+    const syms = [...new Set(allTrades.map(t => t.sym))].slice(0, 5).join(', ');
+    document.getElementById('header-subtitle').textContent = `${allTrades.length} işlem · ${syms}...`;
+    document.getElementById('last-updated').textContent = 'Güncellendi: ' + new Date().toLocaleString('tr-TR');
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+    recalculate();
+}
+
+// Temizle fonksiyonuna hafızayı silmeyi ekle
+function clearFiles() {
+    localStorage.removeItem('mff_trading_data'); // Hafızayı boşalt
+    loadedFiles = {}; 
+    allTrades = [];
+    location.reload(); // Sayfayı tamamen sıfırla
+}
+</script>
+</body>
+</html>
