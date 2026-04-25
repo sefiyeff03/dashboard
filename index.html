@@ -24,6 +24,7 @@
     }
 
     .dash {
+      width: 100%;
       max-width: 1400px;
       margin: 0 auto;
     }
@@ -184,6 +185,7 @@
       border: 1px solid #1e2235;
       border-radius: 10px;
       padding: 14px 12px;
+      min-width: 0;
     }
 
     .metric-label {
@@ -228,6 +230,7 @@
       border: 1px solid #1e2235;
       border-radius: 10px;
       padding: 16px;
+      min-width: 0;
     }
 
     .panel-title {
@@ -445,6 +448,7 @@
       border-radius: 6px;
       text-align: center;
       border: 1px solid rgba(255, 255, 255, 0.05);
+      min-width: 0;
     }
 
     #time-analysis-grid {
@@ -453,6 +457,391 @@
       gap: 8px;
       max-height: 400px;
       overflow-y: auto;
+    }
+
+    #time-summary {
+      min-width: 0;
+    }
+
+    #time-summary .time-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      width: 100%;
+    }
+
+    #time-summary .rank-panel {
+      background: #0b0d14;
+      border-radius: 8px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    #time-summary .rank-profit {
+      border: 1px solid #00d4a0;
+    }
+
+    #time-summary .rank-wins {
+      border: 1px solid #6295f9;
+    }
+
+    #time-summary .rank-losses {
+      border: 1px solid #ff5252;
+    }
+
+    #time-summary .rank-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      min-width: 0;
+    }
+
+    #time-summary .rank-panel-title {
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.25;
+      min-width: 0;
+    }
+
+    #time-summary .rank-list {
+      padding: 4px 8px;
+    }
+
+    #time-summary .rank-row {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) minmax(72px, auto);
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      min-width: 0;
+    }
+
+    #time-summary .rank-row:first-child {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+    }
+
+    #time-summary .rank-row.empty {
+      grid-template-columns: 28px minmax(0, 1fr);
+      opacity: 0.2;
+    }
+
+    #time-summary .rank-medal {
+      font-size: 11px;
+      opacity: 0.55;
+    }
+
+    #time-summary .rank-slot {
+      color: #ffffff;
+      font-size: 11px;
+      line-height: 1.3;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    #time-summary .rank-value {
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1100px) {
+      .metrics-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .mid-row,
+      .bottom-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 760px) {
+
+      html,
+      body {
+        overflow-x: hidden;
+      }
+
+      body {
+        padding: 10px;
+      }
+
+      .header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+      }
+
+      .logo {
+        font-size: 15px;
+        letter-spacing: 0;
+        line-height: 1.25;
+      }
+
+      .loader-bar,
+      .settings-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .loader-bar>span,
+      .settings-bar>span {
+        white-space: normal;
+      }
+
+      .csv-btn,
+      .clear-btn,
+      .settings-bar button {
+        width: 100%;
+        min-height: 40px;
+      }
+
+      .file-tags {
+        width: 100%;
+      }
+
+      .file-tag,
+      .file-hint {
+        max-width: 100%;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+
+      .settings-bar label {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 96px;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .settings-bar input {
+        width: 100%;
+        margin-left: 0;
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        padding: 12px 10px;
+        border-radius: 8px;
+      }
+
+      .metric-label {
+        font-size: 10px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .metric-val {
+        font-size: 20px;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+      }
+
+      .mid-row,
+      .bottom-row {
+        gap: 10px;
+      }
+
+      .panel {
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .mini-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .stat-row {
+        gap: 12px;
+        font-size: 12px;
+      }
+
+      .calendar-toolbar {
+        align-items: stretch !important;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .calendar-toolbar .month-nav {
+        justify-content: space-between;
+      }
+
+      .month-label {
+        min-width: 0;
+        flex: 1;
+        font-size: 13px;
+      }
+
+      .cal-header-row,
+      .cal-grid {
+        gap: 3px;
+      }
+
+      .cal-day-label {
+        border-radius: 4px;
+        font-size: 9px;
+        letter-spacing: 0;
+        padding: 6px 0;
+      }
+
+      .cal-cell {
+        min-height: 54px;
+        padding: 6px 4px;
+        border-radius: 6px;
+      }
+
+      .cal-num {
+        font-size: 10px;
+      }
+
+      .cal-pnl {
+        font-size: 11px;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+      }
+
+      .time-analysis-panel {
+        margin-top: 14px !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+      }
+
+      #time-analysis-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: none;
+        overflow: visible;
+      }
+
+      .time-slot-card {
+        padding: 9px 6px;
+      }
+
+      #time-summary {
+        display: block !important;
+      }
+
+      #time-summary .time-summary-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px;
+      }
+
+      #time-summary .rank-panel-header {
+        padding: 9px 10px;
+      }
+
+      #time-summary .rank-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+        padding: 8px 9px;
+      }
+
+      #time-summary .rank-medal {
+        align-self: start;
+      }
+
+      #time-summary .rank-slot {
+        text-align: left;
+      }
+
+      #time-summary .rank-value {
+        grid-column: 2;
+        text-align: left;
+      }
+
+      .trade-header-row {
+        display: none;
+      }
+
+      .trade-log-scroll {
+        max-height: none;
+        overflow: visible;
+      }
+
+      .trade-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #0f1219;
+        border: 1px solid #1e2235;
+        border-radius: 8px;
+        font-size: 12px;
+      }
+
+      .trade-row>span {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 4px;
+        overflow: hidden;
+      }
+
+      .trade-row>span::before {
+        color: #ffffff;
+        content: "";
+        font-size: 9px;
+        opacity: 0.45;
+        text-transform: uppercase;
+      }
+
+      .trade-row>span:nth-child(1)::before {
+        content: "Tarih";
+      }
+
+      .trade-row>span:nth-child(2)::before {
+        content: "Sembol";
+      }
+
+      .trade-row>span:nth-child(3)::before {
+        content: "Qty";
+      }
+
+      .trade-row>span:nth-child(4)::before {
+        content: "Net PnL";
+      }
+
+      .trade-row>span:nth-child(5)::before {
+        content: "R";
+      }
+
+      .trade-row>span:nth-child(6)::before {
+        content: "Sure";
+      }
+
+      .chart-wrapper {
+        height: 240px;
+      }
+
+      .empty-state {
+        padding: 48px 16px;
+      }
+    }
+
+    @media (max-width: 340px) {
+      body {
+        padding: 8px;
+      }
+
+      #time-analysis-grid,
+      .metrics-grid,
+      .trade-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
 
     ::-webkit-scrollbar {
@@ -514,7 +903,7 @@
         <div class="panel">
           <div class="panel-title">Advanced Stats</div>
           <div id="extra-stats"></div>
-          <div style="margin-top:20px; background:#121520; border:1px solid #1e2235; border-radius:10px; padding:16px;">
+          <div class="time-analysis-panel" style="margin-top:20px; background:#121520; border:1px solid #1e2235; border-radius:10px; padding:16px;">
             <div class="panel-title">ZAMAN ANALİZİ (30 dk. Aralıklı)</div>
             <div id="time-analysis-grid"></div>
             <div id="time-summary"
@@ -525,7 +914,7 @@
       </div>
 
       <div class="panel" style="margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div class="calendar-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
           <div class="panel-title" style="margin:0;">Trading Calendar</div>
           <div class="month-nav">
             <button onclick="changeMonth(-1)" class="csv-btn" style="padding:5px 10px;">&larr;</button>
@@ -1042,17 +1431,15 @@
       // Top 10 satır — veri yoksa boş (sadece sıra numarası)
       function rankRow(k, i, valueHtml, color) {
         if (!k) return `
-      <div style="display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);opacity:0.2;">
-        <span style="font-size:11px;min-width:26px;">${medals[i]}</span>
-        <span style="font-size:12px;">—</span>
+      <div class="rank-row empty">
+        <span class="rank-medal">${medals[i]}</span>
+        <span class="rank-slot">-</span>
       </div>`;
         return `
-      <div style="display:flex;justify-content:space-between;align-items:center;
-                  padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.05);
-                  ${i === 0 ? 'background:rgba(255,255,255,0.03);border-radius:6px;' : ''}">
-        <span style="font-size:11px;opacity:0.5;min-width:26px;">${medals[i]}</span>
-        <span style="color:#ffffff;font-size:11px;flex:1;text-align:center;line-height:1.3;">${slotLabel(k)}</span>
-        <span style="color:${color};font-size:11px;font-weight:bold;min-width:90px;text-align:right;white-space:nowrap;">${valueHtml}</span>
+      <div class="rank-row">
+        <span class="rank-medal">${medals[i]}</span>
+        <span class="rank-slot">${slotLabel(k)}</span>
+        <span class="rank-value" style="color:${color};">${valueHtml}</span>
       </div>`;
       }
 
@@ -1066,14 +1453,14 @@
       const summaryEl = document.getElementById('time-summary');
       summaryEl.style.display = 'block';
       summaryEl.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;width:100%;">
+    <div class="time-summary-grid">
 
-      <div style="background:#0b0d14;border:1px solid #00d4a0;border-radius:10px;overflow:hidden;">
-        <div style="background:rgba(0,212,160,0.08);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,212,160,0.2);">
+      <div class="rank-panel rank-profit">
+        <div class="rank-panel-header" style="background:rgba(0,212,160,0.08);border-bottom-color:rgba(0,212,160,0.2);">
           <span style="font-size:16px;">💰</span>
-          <span style="font-size:10px;color:#00d4a0;letter-spacing:1px;font-weight:bold;">EN KAZANÇLI SAATLER</span>
+          <span class="rank-panel-title" style="color:#00d4a0;">EN KAZANÇLI SAATLER</span>
         </div>
-        <div style="padding:4px 8px;">
+        <div class="rank-list">
           ${pad10(byNet).map((k, i) => rankRow(k, i,
         k ? (groups[k].net >= 0 ? '+' : '') + `$${groups[k].net.toFixed(0)}` : '',
         k ? (groups[k].net >= 0 ? '#00d4a0' : '#ff5252') : '#fff'
@@ -1081,12 +1468,12 @@
         </div>
       </div>
 
-      <div style="background:#0b0d14;border:1px solid #6295f9;border-radius:10px;overflow:hidden;">
-        <div style="background:rgba(98,149,249,0.08);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(98,149,249,0.2);">
+      <div class="rank-panel rank-wins">
+        <div class="rank-panel-header" style="background:rgba(98,149,249,0.08);border-bottom-color:rgba(98,149,249,0.2);">
           <span style="font-size:16px;">🎯</span>
-          <span style="font-size:10px;color:#6295f9;letter-spacing:1px;font-weight:bold;">EN ÇOK TP OLAN SAATLER</span>
+          <span class="rank-panel-title" style="color:#6295f9;">EN ÇOK TP OLAN SAATLER</span>
         </div>
-        <div style="padding:4px 8px;">
+        <div class="rank-list">
           ${pad10(byWins).map((k, i) => {
         if (!k) return rankRow(null, i, '', '');
         const tot = groups[k].win + groups[k].loss;
@@ -1096,12 +1483,12 @@
         </div>
       </div>
 
-      <div style="background:#0b0d14;border:1px solid #ff5252;border-radius:10px;overflow:hidden;">
-        <div style="background:rgba(255,82,82,0.08);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,82,82,0.2);">
+      <div class="rank-panel rank-losses">
+        <div class="rank-panel-header" style="background:rgba(255,82,82,0.08);border-bottom-color:rgba(255,82,82,0.2);">
           <span style="font-size:16px;">🛑</span>
-          <span style="font-size:10px;color:#ff5252;letter-spacing:1px;font-weight:bold;">EN ÇOK STOP OLAN SAATLER</span>
+          <span class="rank-panel-title" style="color:#ff5252;">EN ÇOK STOP OLAN SAATLER</span>
         </div>
-        <div style="padding:4px 8px;">
+        <div class="rank-list">
           ${pad10(byLosses).map((k, i) => {
         if (!k) return rankRow(null, i, '', '');
         const tot = groups[k].win + groups[k].loss;
