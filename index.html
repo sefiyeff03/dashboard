@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MFF Trading Journal</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
   <style>
     * {
@@ -550,6 +551,95 @@
       white-space: nowrap;
     }
 
+    .direction-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .direction-card {
+      background: #0b0d14;
+      border: 1px solid #1e2235;
+      border-radius: 8px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .direction-card.long {
+      border-color: rgba(0, 212, 160, 0.55);
+    }
+
+    .direction-card.short {
+      border-color: rgba(255, 82, 82, 0.55);
+    }
+
+    .direction-title {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .direction-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .direction-stat {
+      background: #0b0d14;
+      padding: 10px 12px;
+    }
+
+    .direction-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 10px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+
+    .direction-value {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .trade-chart-panel {
+      margin-top: 16px;
+    }
+
+    .trade-chart-status {
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .trade-chart-image {
+      display: none;
+      width: 100%;
+      max-width: 920px;
+      border: 1px solid #1e2235;
+      border-radius: 8px;
+      background: #0b0d14;
+    }
+
+    .trade-chart-capture {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: 900px;
+      height: 460px;
+      pointer-events: none;
+    }
+
+    .trade-row {
+      cursor: pointer;
+    }
+
     @media (max-width: 1100px) {
       .metrics-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -763,6 +853,20 @@
         text-align: left;
       }
 
+      .direction-summary {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      .direction-title,
+      .direction-stat {
+        padding: 9px 10px;
+      }
+
+      .direction-value {
+        font-size: 17px;
+      }
+
       .trade-header-row {
         display: none;
       }
@@ -825,6 +929,14 @@
 
       .chart-wrapper {
         height: 240px;
+      }
+
+      .trade-chart-panel {
+        margin-top: 10px;
+      }
+
+      .trade-chart-status {
+        font-size: 11px;
       }
 
       .empty-state {
@@ -952,6 +1064,13 @@
           </div>
         </div>
       </div>
+
+      <div class="panel trade-chart-panel">
+        <div class="panel-title">Trade Chart Resmi</div>
+        <div class="trade-chart-status" id="trade-chart-status">Trade Log'dan bir işleme tıkla; entry/exit chart resmi burada oluşacak.</div>
+        <img class="trade-chart-image" id="trade-chart-image" alt="Trade chart resmi">
+        <div class="trade-chart-capture" id="trade-chart-capture"></div>
+      </div>
     </div>
 
     <div id="empty-state" class="empty-state">
@@ -973,6 +1092,9 @@
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
     let loadedFiles = {};
+    let tradeChartInstance = null;
+    let tradeChartSeries = null;
+    const CANDLE_API_BASE = '/api/candles';
 
     /* ─── CSV PARSER ─── */
     function parseCSV(text) {
@@ -1014,6 +1136,10 @@
       return isNaN(d) ? null : d;
     }
 
+    function makeTradeId(parts) {
+      return parts.map(p => String(p || '')).join('|');
+    }
+
     /* ─── FORMAT DETECTOR ─── */
     function detectFormat(headers) {
       // Performance format: symbol, buyFillId, sellFillId, pnl, boughtTimestamp
@@ -1030,13 +1156,26 @@
         const sym = r.symbol || r.Symbol || '?';
         const qty = parseFloat(r.qty || r.Quantity || 1);
         const pnl = cleanPnl(r.pnl || r.PnL || 0);
-        const ts = r.boughtTimestamp || r.Timestamp || '';
+        const boughtTs = r.boughtTimestamp || '';
+        const soldTs = r.soldTimestamp || '';
+        const ts = boughtTs || r.Timestamp || '';
         const dur = r.duration || '';
         const bfid = r.buyFillId || '';
         const sfid = r.sellFillId || '';
-        const dt = parseTs(ts);
+        const buyDt = parseTs(boughtTs);
+        const sellDt = parseTs(soldTs);
+        const isShort = buyDt && sellDt ? sellDt < buyDt : false;
+        const entryDt = isShort ? sellDt : buyDt;
+        const exitDt = isShort ? buyDt : sellDt;
+        const buyPrice = parseFloat(r.buyPrice || r.BuyPrice || 0);
+        const sellPrice = parseFloat(r.sellPrice || r.SellPrice || 0);
+        const entryPrice = isShort ? sellPrice : buyPrice;
+        const exitPrice = isShort ? buyPrice : sellPrice;
+        const dt = entryDt || parseTs(ts);
         const date = dt ? dt.toISOString().slice(0, 10) : '';
-        return { sym, qty, pnl, ts, dur, bfid, sfid, dt, date, durSec: parseDurSec(dur) };
+        const direction = isShort ? 'short' : 'long';
+        const id = makeTradeId([sym, bfid, sfid, ts, boughtTs, soldTs]);
+        return { id, sym, qty, pnl, ts, dur, bfid, sfid, dt, entryDt: dt, exitDt, date, durSec: parseDurSec(dur), direction, entryPrice, exitPrice, buyPrice, sellPrice };
       }).filter(t => t.sym && t.sym !== '?');
     }
 
@@ -1100,8 +1239,12 @@
           const sym = b['Contract'] || b['Product'] || '?';
           const bfid = b['Fill ID'] || b['_id'] || String(bi);
           const sfid = s['Fill ID'] || s['_id'] || String(si);
+          const direction = isShort ? 'short' : 'long';
+          const entryPrice = isShort ? sellP : buyP;
+          const exitPrice = isShort ? buyP : sellP;
+          const id = makeTradeId([sym, bfid, sfid, entryDt.toISOString(), exitDt.toISOString()]);
 
-          trades.push({ sym, qty, pnl, ts, dur: '', bfid, sfid, dt: entryDt, date, durSec });
+          trades.push({ id, sym, qty, pnl, ts, dur: '', bfid, sfid, dt: entryDt, entryDt, exitDt, date, durSec, direction, entryPrice, exitPrice, buyPrice: buyP, sellPrice: sellP });
           bi++; si++;
         }
       });
@@ -1168,6 +1311,7 @@
       document.getElementById('header-subtitle').textContent = `${allTrades.length} işlem yüklendi.`;
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('empty-state').style.display = 'none';
+      resetTradeChart();
 
       recalculate();
     }
@@ -1180,6 +1324,7 @@
       document.getElementById('empty-state').style.display = 'block';
       document.getElementById('header-subtitle').textContent = 'Veri bekleniyor...';
       if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      resetTradeChart("Trade Log'dan bir işleme tıkla; entry/exit chart resmi burada oluşacak.");
     }
 
     function changeMonth(dir) {
@@ -1203,6 +1348,172 @@
       return s > 0 ? `${m}m ${s}s` : `${m}m`;
     }
     function fmt(v) { return (v >= 0 ? '+' : '') + `$${Math.abs(v).toFixed(2)}`; }
+
+    function fmtPrice(v) {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n.toFixed(2).replace(/\.00$/, '') : '-';
+    }
+
+    function yahooSymbolFor(sym) {
+      const raw = String(sym || '').trim().toUpperCase();
+      if (!raw) return '';
+      if (raw.includes('=F')) return raw;
+      const cleaned = raw.replace(/[^A-Z0-9]/g, '');
+      const base = cleaned.replace(/[FGHJKMNQUVXZ]\d{1,2}$/, '');
+      const map = {
+        ES: 'ES=F', MES: 'MES=F',
+        NQ: 'NQ=F', MNQ: 'MNQ=F',
+        YM: 'YM=F', MYM: 'MYM=F',
+        RTY: 'RTY=F', M2K: 'M2K=F',
+        GC: 'GC=F', MGC: 'MGC=F',
+        SI: 'SI=F', SIL: 'SI=F',
+        CL: 'CL=F', MCL: 'CL=F',
+        NG: 'NG=F', RB: 'RB=F', HO: 'HO=F',
+        ZB: 'ZB=F', ZN: 'ZN=F', ZF: 'ZF=F', ZT: 'ZT=F',
+        '6E': '6E=F', '6B': '6B=F', '6J': '6J=F', '6A': '6A=F', '6C': '6C=F',
+        BTC: 'BTC=F', MBT: 'BTC=F', ETH: 'ETH=F', MET: 'ETH=F'
+      };
+      return map[base] || `${base || cleaned}=F`;
+    }
+
+    function resetTradeChart(message) {
+      const status = document.getElementById('trade-chart-status');
+      const img = document.getElementById('trade-chart-image');
+      const capture = document.getElementById('trade-chart-capture');
+      if (tradeChartInstance) {
+        tradeChartInstance.remove();
+        tradeChartInstance = null;
+        tradeChartSeries = null;
+      }
+      if (capture) capture.innerHTML = '';
+      if (img) {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+      }
+      if (status) {
+        status.style.color = 'rgba(255,255,255,0.62)';
+        status.textContent = message || "Trade Log'dan bir işleme tıkla; entry/exit chart resmi burada oluşacak.";
+      }
+    }
+
+    function nearestCandleTime(candles, target) {
+      if (!candles.length) return target;
+      return candles.reduce((best, c) => Math.abs(c.time - target) < Math.abs(best - target) ? c.time : best, candles[0].time);
+    }
+
+    async function renderTradeChartImage(tradeId) {
+      const status = document.getElementById('trade-chart-status');
+      const img = document.getElementById('trade-chart-image');
+      const capture = document.getElementById('trade-chart-capture');
+      const rawTrade = allTrades.find(t => t.id === tradeId);
+      if (!rawTrade) return;
+
+      const comm = parseFloat(document.getElementById('commInput').value) || 4;
+      const trade = { ...rawTrade, net: rawTrade.pnl - (rawTrade.qty * comm) };
+      const entryDt = trade.entryDt || trade.dt;
+      const exitDt = trade.exitDt || trade.dt;
+      const entryPrice = parseFloat(trade.entryPrice);
+      const exitPrice = parseFloat(trade.exitPrice);
+      const yahooSymbol = yahooSymbolFor(trade.sym);
+
+      if (!window.LightweightCharts) {
+        status.style.color = '#ff5252';
+        status.textContent = 'Chart kütüphanesi yüklenemedi. İnternet bağlantısını kontrol et.';
+        return;
+      }
+      if (location.protocol === 'file:') {
+        status.style.color = '#ff5252';
+        status.textContent = 'Chart resmi için dashboardu local server ile aç: python dashboard_server.py';
+        return;
+      }
+      if (!entryDt || !exitDt || !Number.isFinite(entryPrice) || !Number.isFinite(exitPrice)) {
+        status.style.color = '#ff5252';
+        status.textContent = 'Bu trade için giriş/çıkış fiyatı veya zamanı eksik.';
+        return;
+      }
+
+      status.style.color = 'rgba(255,255,255,0.62)';
+      status.textContent = `${trade.sym} için mumlar alınıyor...`;
+      if (img) img.style.display = 'none';
+
+      try {
+        const fromMs = Math.min(entryDt.getTime(), exitDt.getTime()) - 45 * 60 * 1000;
+        const toMs = Math.max(entryDt.getTime(), exitDt.getTime()) + 45 * 60 * 1000;
+        const url = `${CANDLE_API_BASE}?symbol=${encodeURIComponent(yahooSymbol)}&start=${Math.floor(fromMs / 1000)}&end=${Math.floor(toMs / 1000)}&interval=1m`;
+        const res = await fetch(url);
+        const payload = await res.json();
+        if (!res.ok || !payload.ok || !payload.candles || !payload.candles.length) {
+          throw new Error(payload.error || 'Mum verisi bulunamadı.');
+        }
+
+        const candles = payload.candles.map(c => ({
+          time: c.time,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close
+        }));
+
+        if (tradeChartInstance) tradeChartInstance.remove();
+        capture.innerHTML = '';
+        tradeChartInstance = LightweightCharts.createChart(capture, {
+          width: 900,
+          height: 460,
+          layout: { background: { color: '#0b0d14' }, textColor: '#d7dcef' },
+          grid: { vertLines: { color: '#1a1e2c' }, horzLines: { color: '#1a1e2c' } },
+          rightPriceScale: { borderColor: '#1e2235' },
+          timeScale: { borderColor: '#1e2235', timeVisible: true, secondsVisible: false },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
+        });
+        tradeChartSeries = tradeChartInstance.addCandlestickSeries({
+          upColor: '#00d4a0',
+          downColor: '#ff5252',
+          borderUpColor: '#00d4a0',
+          borderDownColor: '#ff5252',
+          wickUpColor: '#00d4a0',
+          wickDownColor: '#ff5252'
+        });
+        tradeChartSeries.setData(candles);
+
+        const entryTime = nearestCandleTime(candles, Math.floor(entryDt.getTime() / 1000));
+        const exitTime = nearestCandleTime(candles, Math.floor(exitDt.getTime() / 1000));
+        const isShort = trade.direction === 'short';
+        const exitColor = trade.net >= 0 ? '#00d4a0' : '#ff5252';
+        tradeChartSeries.setMarkers([
+          {
+            time: entryTime,
+            position: isShort ? 'aboveBar' : 'belowBar',
+            color: '#6295f9',
+            shape: isShort ? 'arrowDown' : 'arrowUp',
+            text: `ENTRY ${fmtPrice(entryPrice)}`
+          },
+          {
+            time: exitTime,
+            position: isShort ? 'belowBar' : 'aboveBar',
+            color: exitColor,
+            shape: isShort ? 'arrowUp' : 'arrowDown',
+            text: `EXIT ${fmtPrice(exitPrice)} ${fmt(trade.net)}`
+          }
+        ]);
+        tradeChartInstance.timeScale().setVisibleRange({ from: candles[0].time, to: candles[candles.length - 1].time });
+
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const canvas = tradeChartInstance.takeScreenshot();
+        img.src = canvas.toDataURL('image/png');
+        img.style.display = 'block';
+        status.style.color = 'rgba(255,255,255,0.72)';
+        status.textContent = `${trade.sym} (${trade.direction.toUpperCase()}) entry/exit chart resmi hazır. Kaynak: Yahoo Finance ${yahooSymbol}`;
+      } catch (err) {
+        status.style.color = '#ff5252';
+        status.textContent = `${trade.sym} için chart resmi oluşturulamadı: ${err.message}`;
+      }
+    }
+
+    document.getElementById('trade-log').addEventListener('click', e => {
+      const row = e.target.closest('.trade-row[data-trade-id]');
+      if (!row) return;
+      renderTradeChartImage(decodeURIComponent(row.dataset.tradeId));
+    });
 
     /* ─── MAIN RENDER ─── */
     function renderAll() {
@@ -1281,7 +1592,7 @@
         const rVal = (t.net / risk).toFixed(2);
         const rc = t.net > 0 ? '#00d4a0' : t.net < 0 ? '#ff5252' : '#ffffff';
         const time = t.dt ? t.dt.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
-        tlog.innerHTML += `<div class="trade-row">
+        tlog.innerHTML += `<div class="trade-row" data-trade-id="${encodeURIComponent(t.id)}" title="Chart resmini oluştur">
       <span style="color:#ffffff;font-size:11px;">${time}</span>
       <span><span class="badge">${t.sym}</span></span>
       <span style="color:#ffffff;">${t.qty}</span>
@@ -1405,7 +1716,13 @@
       if (!keys.length) { grid.innerHTML = '<div style="opacity:0.4;font-size:12px;">Zaman verisi yok</div>'; return; }
 
       // Grid kartları
-      keys.forEach(key => {
+      const keysByTradeCount = [...keys].sort((a, b) => {
+        const totalA = groups[a].win + groups[a].loss;
+        const totalB = groups[b].win + groups[b].loss;
+        return totalB - totalA || a.localeCompare(b);
+      });
+
+      keysByTradeCount.forEach(key => {
         const g = groups[key];
         const total = g.win + g.loss;
         const wr = total ? (g.win / total * 100).toFixed(0) : 0;
@@ -1425,6 +1742,15 @@
       const byNet = [...keys].sort((a, b) => groups[b].net - groups[a].net);
       const byWins = [...keys].sort((a, b) => groups[b].win - groups[a].win);
       const byLosses = [...keys].sort((a, b) => groups[b].loss - groups[a].loss);
+      const directionStats = {
+        long: { tp: 0, stop: 0 },
+        short: { tp: 0, stop: 0 }
+      };
+      trades.forEach(t => {
+        const side = t.direction === 'short' ? 'short' : 'long';
+        if (t.net > 0) directionStats[side].tp++;
+        else if (t.net < 0) directionStats[side].stop++;
+      });
 
       const medals = ['🥇', '🥈', '🥉', '4.', '5.', '6.', '7.', '8.', '9.', '10.'];
 
@@ -1498,6 +1824,35 @@
         </div>
       </div>
 
+    </div>
+
+    <div class="direction-summary">
+      <div class="direction-card long">
+        <div class="direction-title" style="color:#00d4a0;">LONG İŞLEMLER</div>
+        <div class="direction-stats">
+          <div class="direction-stat">
+            <div class="direction-label">TP</div>
+            <div class="direction-value green">${directionStats.long.tp}</div>
+          </div>
+          <div class="direction-stat">
+            <div class="direction-label">STOP</div>
+            <div class="direction-value red">${directionStats.long.stop}</div>
+          </div>
+        </div>
+      </div>
+      <div class="direction-card short">
+        <div class="direction-title" style="color:#ff5252;">SHORT İŞLEMLER</div>
+        <div class="direction-stats">
+          <div class="direction-stat">
+            <div class="direction-label">TP</div>
+            <div class="direction-value green">${directionStats.short.tp}</div>
+          </div>
+          <div class="direction-stat">
+            <div class="direction-label">STOP</div>
+            <div class="direction-value red">${directionStats.short.stop}</div>
+          </div>
+        </div>
+      </div>
     </div>`;
     }
 
@@ -1516,7 +1871,7 @@
         const rVal = (t.net / risk).toFixed(2);
         const rc = t.net > 0 ? '#00d4a0' : t.net < 0 ? '#ff5252' : '#ffffff';
         const time = t.dt ? t.dt.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
-        tlog.innerHTML += `<div class="trade-row">
+        tlog.innerHTML += `<div class="trade-row" data-trade-id="${encodeURIComponent(t.id)}" title="Chart resmini oluştur">
       <span style="font-size:11px;">${time}</span>
       <span><span class="badge">${t.sym}</span></span>
       <span>${t.qty}</span>
